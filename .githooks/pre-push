@@ -1,0 +1,3 @@
+#!/bin/sh
+# Second safety net: re-checks every commit being pushed. See AGENTS.md.
+exec python3 -I "$(git rev-parse --show-toplevel)/.githooks/check-sensitive.py" push
