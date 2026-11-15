@@ -1,0 +1,52 @@
+# ---- Personal / financial data: never commit (see AGENTS.md) ----
+
+# Databases and SQLite side files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*-wal
+*-shm
+
+# Bank/card exports and app exports/backups
+*.csv
+*.tsv
+*.ofx
+*.qfx
+*.qif
+*.xlsx
+*.xls
+*.bak
+*.backup
+backups/
+exports/
+
+# Synthetic test fixtures are the only allowed data files
+!tests/fixtures/**/*.csv
+!tests/fixtures/**/*.tsv
+
+# Scratch areas for local-only data
+private/
+scratch/
+local-data/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Local tool settings
+.claude/settings.local.json
+
+# ---- Build output and dependencies ----
+node_modules/
+dist/
+target/
+src-tauri/target/
+.svelte-kit/
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/
+.idea/

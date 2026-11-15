@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks commits containing personal/financial data. See AGENTS.md.
+exec python3 -I "$(git rev-parse --show-toplevel)/.githooks/check-sensitive.py" commit

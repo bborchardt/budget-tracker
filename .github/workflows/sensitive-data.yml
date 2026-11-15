@@ -1,0 +1,26 @@
+# Scans every commit in a pull request (and pushes to main) for personal/financial data and secrets,
+# using the same check as the local git hooks. Required by the main branch ruleset, so it catches
+# anything committed with --no-verify or from a clone without the hooks enabled. See AGENTS.md.
+name: Sensitive data check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sensitive-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # the check reads every commit in the range, not just the latest
+          fetch-depth: 0
+      - name: Scan commits
+        run: python3 -I .githooks/check-sensitive.py range "$BASE_SHA" "$HEAD_SHA"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
