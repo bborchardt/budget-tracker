@@ -6,6 +6,7 @@ Used by .githooks/pre-commit and .githooks/pre-push. See AGENTS.md.
 Usage:
   check-sensitive.py commit   # scan staged changes
   check-sensitive.py push     # scan commits being pushed (reads pre-push stdin)
+  check-sensitive.py range BASE HEAD   # scan commits in BASE..HEAD (used by CI)
 
 Findings report file, line, and rule only. Matched text is never printed,
 so the check itself doesn't echo sensitive data into terminals or logs.
@@ -126,6 +127,17 @@ def scan_staged(findings):
     check_diff(diff, "", findings)
 
 
+def scan_commits(revs, findings):
+    for commit in revs.decode().split():
+        where = f"[{commit[:8]}] "
+        base = ["diff-tree", "-r", "--root", "--no-commit-id", "--no-renames"]
+        paths = changed_paths([*base, commit])
+        check_paths(paths, lambda p, c=commit: git("show", f"{c}:{p}")[:16], where, findings)
+        diff = git(*base, "-p", "-U0", "--no-color", "--no-ext-diff",
+                   "--diff-filter=ACMR", commit).decode("utf-8", "replace")
+        check_diff(diff, where, findings)
+
+
 def scan_push(findings):
     for entry in sys.stdin.read().splitlines():
         parts = entry.split()
@@ -138,14 +150,15 @@ def scan_push(findings):
             revs = git("rev-list", local_sha, "--not", "--remotes")
         else:
             revs = git("rev-list", f"{remote_sha}..{local_sha}")
-        for commit in revs.decode().split():
-            where = f"[{commit[:8]}] "
-            base = ["diff-tree", "-r", "--root", "--no-commit-id", "--no-renames"]
-            paths = changed_paths([*base, commit])
-            check_paths(paths, lambda p, c=commit: git("show", f"{c}:{p}")[:16], where, findings)
-            diff = git(*base, "-p", "-U0", "--no-color", "--no-ext-diff",
-                       "--diff-filter=ACMR", commit).decode("utf-8", "replace")
-            check_diff(diff, where, findings)
+        scan_commits(revs, findings)
+
+
+def scan_range(base_sha, head_sha, findings):
+    if not base_sha or base_sha == ZERO_SHA:
+        revs = git("rev-list", head_sha)
+    else:
+        revs = git("rev-list", f"{base_sha}..{head_sha}")
+    scan_commits(revs, findings)
 
 
 def main():
@@ -153,11 +166,16 @@ def main():
     findings = []
     if mode == "push":
         scan_push(findings)
+    elif mode == "range":
+        if len(sys.argv) != 4:
+            print("usage: check-sensitive.py range BASE HEAD", file=sys.stderr)
+            return 2
+        scan_range(sys.argv[2], sys.argv[3], findings)
     else:
         scan_staged(findings)
     if not findings:
         return 0
-    action = "Push" if mode == "push" else "Commit"
+    action = {"push": "Push", "range": "Check"}.get(mode, "Commit")
     print(f"\n{action} blocked: possible personal/financial data or secrets (see AGENTS.md).\n", file=sys.stderr)
     for finding in findings:
         print(f"  {finding}", file=sys.stderr)

@@ -51,6 +51,12 @@ Rules:
 - If a line is a false positive, the `pii-allow` marker on that line skips it — **only with the user's approval**, and preferably by changing the fake value instead.
 - The hooks are a safety net, not a substitute for reviewing the diff.
 
+### Branch protection & CI
+
+- `main` is protected by a GitHub ruleset: no direct pushes, no force-pushes, no deletion. **All changes go through pull requests.**
+- The **`sensitive-data`** workflow (`.github/workflows/sensitive-data.yml`) runs the same check on every commit in a pull request and is a **required status check**. It catches anything the local hooks missed.
+- Work on a branch, then open a pull request. Never try to work around the ruleset.
+
 ### Before every commit
 
 Agents must:
