@@ -77,6 +77,22 @@ Stop and tell the user immediately. Do **not** try to fix it with a follow-up co
 - No telemetry or analytics. The only permitted network traffic is to a user-configured **localhost** model server for optional AI assist (see `requirements.md`).
 - Keep `.gitignore` current whenever a new kind of data file is introduced (e.g., a new backup or export format).
 
+## Development
+
+```sh
+npm install                      # once
+npm run tauri dev                # run the app (Vite + Rust, hot reload)
+npm run check && npm test        # frontend types + Vitest
+cd src-tauri && cargo test       # backend tests (in-memory databases)
+cd src-tauri && cargo clippy --all-targets && cargo fmt --check
+python3 -I .githooks/test_check_sensitive.py   # tests for the sensitive-data check
+npm run tauri build              # unsigned .app / .dmg
+```
+
+- **Use a throwaway database during development:** `BUDGET_TRACKER_DATA_DIR=/some/scratch/dir npm run tauri dev`. Without it, the app opens the real database in `~/Library/Application Support/budget-tracker`.
+- Layout: `src-tauri/src/` (Rust: `db/migrations/` schema, `plan.rs`, `transactions.rs`, `savings.rs`, `overview.rs`, `import/` parse → clean → match → tag → commit, `commands.rs` Tauri commands) and `src/` (Svelte: `views/`, `components/`, `lib/api.ts` typed command wrappers, `lib/types.ts` mirrors of the Rust types).
+- Money is integer cents everywhere; dates are ISO `YYYY-MM-DD`. Schema changes go in a new numbered migration file, never by editing an existing one.
+
 ## How We Work
 
 - Requirements first: discuss and record decisions in `requirements.md`, then implement.

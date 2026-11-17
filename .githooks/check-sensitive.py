@@ -48,7 +48,9 @@ def luhn_ok(digits: str) -> bool:
 
 
 def card_number(line: str) -> bool:
-    for m in re.finditer(r"(?<![\d.])(?:\d[ -]?){12,18}\d(?![\d])", line):
+    # Digit runs inside a longer letters-and-digits token (hex checksums, hashes, IDs) are skipped:
+    # a real card number stands alone or is grouped with spaces/dashes.
+    for m in re.finditer(r"(?<![\dA-Za-z.])(?:\d[ -]?){12,18}\d(?![\dA-Za-z])", line):
         digits = re.sub(r"\D", "", m.group())
         if 13 <= len(digits) <= 19 and luhn_ok(digits):
             return True
@@ -60,6 +62,16 @@ def regex(pattern, flags=0):
     return lambda line: compiled.search(line) is not None
 
 
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@(?!example\.(?:com|org|net)\b)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.([A-Za-z]{2,})")
+# Filenames like "icon@2x.png" look like emails; these endings are file types, not email domains.
+FILE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "icns", "bmp", "tiff",
+                   "json", "css", "js", "html", "toml", "yaml", "yml", "lock", "svelte", "rs"}
+
+
+def email_address(line: str) -> bool:
+    return any(m.group(1).lower() not in FILE_EXTENSIONS for m in EMAIL.finditer(line))
+
+
 CONTENT_RULES = [
     ("possible card number (passes Luhn check)", card_number),
     ("masked card/account number (stars, x's, or 'ending in' followed by 4 digits)",
@@ -67,8 +79,7 @@ CONTENT_RULES = [
     ("labeled account/routing number",
      regex(r"\b(?:acct|account|routing|aba)\s*(?:no\.?|number|num|#)?\s*[:#]?\s*\d{4,}", re.I)),
     ("SSN-like number", regex(r"\b\d{3}-\d{2}-\d{4}\b")),
-    ("email address (only @example.com/.org/.net allowed)",
-     regex(r"[A-Za-z0-9._%+-]+@(?!example\.(?:com|org|net)\b)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")),
+    ("email address (only @example.com/.org/.net allowed)", email_address),
     ("API key or secret",
      regex(r"\bsk-[A-Za-z0-9_-]{16,}|\bAKIA[0-9A-Z]{16}\b|-----BEGIN [A-Z ]*PRIVATE KEY-----"
            r"|\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*[\"']?[A-Za-z0-9_\-]{12,}", re.I)),

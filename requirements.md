@@ -315,6 +315,33 @@ Taking messy input and helping clean and tag it is central to the app's value.
 4. **Testing: Rust built-in tests + Vitest.** Covers the backend logic and the frontend.
 5. **Packaging: Unsigned DMG.** Personal use only; signing can come later if needed.
 
+## Implementation Decisions (2026-11-15, easy to revisit)
+
+Made during the first build without blocking on a question; each is isolated and easy to change.
+
+1. **Money** is stored as integer cents; dates as ISO text. Transaction amounts are signed from the household's view (negative = money out).
+2. **Adjustment logging starts when a plan has its first transaction.** Before that, edits are setup and aren't logged.
+3. **Learned tagging rules are keyed by merchant** (cleaned description without store numbers/locations) and store category/source **names**, so they carry across years.
+4. **Numeric dates are month-first** (US). A date without a year is the most recent such date.
+5. **Sign convention per source** is guessed on first import (most amounts positive → purchases shown positive) and remembered; a "Flip signs" control corrects it.
+6. **Possible duplicates default to "import"** (not a duplicate) until the user says "Yes, same."
+7. **Pending → posted matching:** same source, posted 1 day before to 5 days after, similar merchant, amount within 30% (min $2) or a pending hold of $1 or less.
+8. **Deleted transactions are kept hidden** so a later overlapping import doesn't bring them back.
+9. **Pace colors:** yellow as soon as spending is ahead of an even pace; red at 10 points of the annual budget ahead (setting). Lumpy: yellow at 90% used.
+10. **Income "expected by now":** steady sources accrue by day; lumpy sources count each expected month once it has ended.
+11. **Savings "expected by now":** the manual hold-back accrues by day; split-year shares are expected after the payment's month.
+12. **Undo** is allowed for any import unless a later import already replaced one of its pending rows.
+13. **Debit/credit columns without headers** are assumed to be debit first.
+14. **Dev data:** `BUDGET_TRACKER_DATA_DIR` points the app at a throwaway database.
+
+### Not built yet
+
+- AI assist (settings exist; only localhost endpoints accepted)
+- CSV export (transactions, summaries) and database backup/restore
+- Manual column mapping for formats the parser can't read automatically
+- Category trend view (backend command exists, no screen yet)
+- Arrow-key row navigation in the import review (tab + type-to-select works)
+
 ## Assumptions
 
 - The user is the only user of the app (single-user, no auth)
